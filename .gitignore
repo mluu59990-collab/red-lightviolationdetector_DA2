@@ -1,2 +1,4 @@
 data/
 cv_env/
+.env/
+venv/

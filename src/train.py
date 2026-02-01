@@ -1,10 +1,11 @@
 from src.model import SimpleNeuralNetwork
 from src.dataset import CocoDetectionDataset
 from torch.ultis.data import DataLoader
+from torchvision.transforms import ToTensor
 import torch.nn as nn
 if __name__ == '__main__':
     num_epoch = 50
-    train_dataset = CocoDetectionDataset(root="/Users/Documents/DL-Project/OD_DA2_NN_v1/data/dataset/train",train=True)
+    train_dataset = CocoDetectionDataset(root="",train=True,transform=ToTensor)
     train_dataloader = DataLoader(
         dataset = train_dataset,
         batch_size = 8,

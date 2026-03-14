@@ -91,8 +91,8 @@ class InferEngine:
 
 if __name__ == "__main__":
     engine = InferEngine(
-        vehicle_weights="/Users/Documents/DL-Project/OD_DA2_NN_v1/config/yolov12_best.pt",
-        light_weights="/Users/Documents/DL-Project/OD_DA2_NN_v1/config/yolov12_best.pt",
-        video_path="/Users/Documents/DL-Project/OD_DA2_NN_v1/data/dataset/7572405326846.mp4"
+        vehicle_weights="/kaggle/working/red-lightviolationdetector_DA2/config/yolov12_best.pt",
+        light_weights="/kaggle/working/red-lightviolationdetector_DA2/config/yolov12_best.pt",
+        video_path="/kaggle/input/datasets/minhluu0102/test-dta/dataset/7572405326846.mp4"
     )
     engine.run()

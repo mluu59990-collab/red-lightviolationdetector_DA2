@@ -2,4 +2,4 @@ data/
 cv_env/
 .env/
 venv/
-config/
+/config/

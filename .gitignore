@@ -1,5 +1,11 @@
-data/
-cv_env/
-.env/
-venv/
+/data/
+/cv_env/
+/.env/
+/venv/
 /config/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+__pycache__/
+.ipynb_checkpoints/

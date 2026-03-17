@@ -1,6 +1,0 @@
-path: # Duong dan du lieu
-train: # Duong dan anh train
-val : #Duong dan tap val
-#class
-nc : 8
-names: ["bicycle","bus","car","Green","motorbike","Red","truck","Yellow"]

@@ -2,7 +2,7 @@ from ultralytics import YOLO
 
 
 class TrafficLightDetector:
-    def __init__(self, weights, device="mps", conf_threshold=0.3):
+    def __init__(self, weights, device="mps", conf_threshold=0.5):
         self.model = YOLO(weights)
         self.device = device
         self.conf_threshold = conf_threshold

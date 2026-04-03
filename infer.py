@@ -1,13 +1,15 @@
 import cv2
 from src.Vehicle_detect import VehicleDetector
 from src.traffic_light import TrafficLightDetector
-
+from src.stop_line import StopLine
+from src.violation_logic import StopLineViolationDetector
+from src.light_state import TrafficLightStateManager
+from src.visualizer import Visualizer
 
 class InferEngine:
     def __init__(self, vehicle_weights, light_weights, video_path):
         self.video_path = video_path
         self.frame_idx = 0
-        self.last_light_detections = []
 
         self.vehicle_detector = VehicleDetector(
             weights=vehicle_weights,
@@ -22,79 +24,36 @@ class InferEngine:
             conf_threshold=0.5
         )
 
-    def draw_tracked_vehicles(self, frame, tracked_vehicles):
+        self.stop_line = StopLine(
+            pt1=(25, 390),
+            pt2=(760, 355)
+        )
+
+        self.violation_detector = StopLineViolationDetector(self.stop_line)
+        self.light_state = TrafficLightStateManager()
+        self.visualizer = Visualizer()
+
+    def process_traffic_light(self, frame):
+        detections = self.light_detector.process(frame)
+        self.light_state.update(detections)
+
+    def process_vehicles(self, tracked_vehicles):
+        red_light = self.light_state.is_red()
+
         for obj in tracked_vehicles:
             x1, y1, x2, y2 = obj["bbox"]
             track_id = int(obj["track_id"])
-            class_name = obj["class_name"]
-            foot = obj["foot"]
 
-            label = f"{class_name} | ID {track_id}"
-
-
-            color = (
-                50 + (track_id * 40) % 180,
-                50 + (track_id * 70) % 180,
-                50 + (track_id * 90) % 180
+            foot, is_violation = self.violation_detector.update(
+                track_id=track_id,
+                bbox=(x1, y1, x2, y2),
+                red_light=red_light
             )
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
+            obj["foot"] = foot
+            obj["is_violation"] = is_violation
 
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.5
-            thickness = 1
-            (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
-
-            text_x = x1
-            text_y = y1 - 6 if y1 > 20 else y1 + th + 6
-
-            cv2.rectangle(
-                frame,
-                (text_x, text_y - th - 4),
-                (text_x + tw + 4, text_y + 2),
-                color,
-                -1
-            )
-
-            cv2.putText(
-                frame,
-                label,
-                (text_x + 2, text_y),
-                font,
-                font_scale,
-                (255, 255, 255),
-                1
-            )
-
-            cv2.circle(frame, foot, 3, color, -1)
-
-    def draw_traffic_lights(self, frame, light_detections):
-        for obj in light_detections:
-            x1, y1, x2, y2 = obj["bbox"]
-            class_name = obj["class_name"]
-            conf = obj["conf"]
-
-            label = f"{class_name} {conf:.2f}"
-
-            if "red" in class_name.lower():
-                color = (0, 0, 255)
-            elif "green" in class_name.lower():
-                color = (0, 255, 0)
-            elif "yellow" in class_name.lower():
-                color = (0, 255, 255)
-            else:
-                color = (255, 255, 255)
-
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
-            cv2.putText(
-                frame,
-                label,
-                (x1, y1 - 8 if y1 > 20 else y1 + 18),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.45,
-                color,
-                1
-            )
+        return tracked_vehicles
 
     def run(self):
         cap = cv2.VideoCapture(self.video_path)
@@ -113,13 +72,17 @@ class InferEngine:
 
             tracked_vehicles = self.vehicle_detector.track(frame)
 
-            if self.frame_idx % 5 == 0:
-                self.last_light_detections = self.light_detector.process(frame)
+            self.process_traffic_light(frame)
+            tracked_vehicles = self.process_vehicles(tracked_vehicles)
 
-            light_detections = self.last_light_detections
-
-            self.draw_tracked_vehicles(frame, tracked_vehicles)
-            self.draw_traffic_lights(frame, light_detections)
+            self.stop_line.draw(frame)
+            self.visualizer.draw_tracked_vehicles(frame, tracked_vehicles)
+            self.visualizer.draw_traffic_lights(frame, self.light_state.get_detections())
+            self.visualizer.draw_hud(
+                frame,
+                self.light_state.is_red(),
+                self.violation_detector.get_total_violations()
+            )
 
             cv2.imshow("Infer", frame)
 

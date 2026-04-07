@@ -1,13 +1,13 @@
 import cv2
 from src.Vehicle_detect import VehicleDetector
-from src.traffic_light import TrafficLightDetector
 from src.stop_line import StopLine
 from src.violation_logic import StopLineViolationDetector
 from src.light_state import TrafficLightStateManager
 from src.visualizer import Visualizer
 
+
 class InferEngine:
-    def __init__(self, vehicle_weights, light_weights, video_path):
+    def __init__(self, vehicle_weights, video_path):
         self.video_path = video_path
         self.frame_idx = 0
 
@@ -18,24 +18,26 @@ class InferEngine:
             detect_classes={2, 3, 5, 7}
         )
 
-        self.light_detector = TrafficLightDetector(
-            weights=light_weights,
-            device="mps",
-            conf_threshold=0.5
-        )
-
+        # Stop line mới của bạn
         self.stop_line = StopLine(
-            pt1=(25, 390),
-            pt2=(760, 355)
+            pt1=(183, 355),
+            pt2=(720, 352)
         )
 
         self.violation_detector = StopLineViolationDetector(self.stop_line)
-        self.light_state = TrafficLightStateManager()
+
+        # ROI đèn giao thông
+        # Bạn phải tự chỉnh lại cho khớp đúng video 960x540
+        self.light_state = TrafficLightStateManager(
+            roi = (632, 53, 799, 94),
+            history_size=7,
+            min_pixels=20
+        )
+
         self.visualizer = Visualizer()
 
     def process_traffic_light(self, frame):
-        detections = self.light_detector.process(frame)
-        self.light_state.update(detections)
+        self.light_state.update(frame)
 
     def process_vehicles(self, tracked_vehicles):
         red_light = self.light_state.is_red()
@@ -77,12 +79,14 @@ class InferEngine:
 
             self.stop_line.draw(frame)
             self.visualizer.draw_tracked_vehicles(frame, tracked_vehicles)
-            self.visualizer.draw_traffic_lights(frame, self.light_state.get_detections())
+
             self.visualizer.draw_hud(
                 frame,
                 self.light_state.is_red(),
                 self.violation_detector.get_total_violations()
             )
+
+            self.light_state.draw_debug(frame)
 
             cv2.imshow("Infer", frame)
 
@@ -96,7 +100,6 @@ class InferEngine:
 if __name__ == "__main__":
     engine = InferEngine(
         vehicle_weights="/Users/Documents/DL-Project/OD_DA2_NN_v1/config/yolov12_best.pt",
-        light_weights="/Users/Documents/DL-Project/OD_DA2_NN_v1/config/best_yolov12_light.pt",
         video_path="/Users/Documents/DL-Project/OD_DA2_NN_v1/data/dataset/7572405326846.mp4"
     )
     engine.run()
